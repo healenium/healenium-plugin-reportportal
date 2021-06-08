@@ -1,0 +1,1 @@
+export {HealeniumTab} from './healeniumTab';
