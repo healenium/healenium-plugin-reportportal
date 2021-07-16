@@ -4,13 +4,18 @@ import com.epam.reportportal.extension.PluginCommand;
 import com.epam.reportportal.extension.ReportPortalExtensionPoint;
 import com.epam.reportportal.extension.classloader.DelegatingClassLoader;
 import com.epam.reportportal.extension.common.IntegrationTypeProperties;
+import com.epam.reportportal.extension.event.LaunchAutoAnalysisFinishEvent;
 import com.epam.reportportal.extension.event.PluginEvent;
 import com.epam.reportportal.extension.healenium.command.GetFileCommand;
+import com.epam.reportportal.extension.healenium.event.launch.HealeniumLaunchAutoAnalysisFinishEvent;
 import com.epam.reportportal.extension.healenium.event.plugin.PluginEventHandlerFactory;
 import com.epam.reportportal.extension.healenium.event.plugin.PluginEventListener;
 import com.epam.reportportal.extension.healenium.utils.MemoizingSupplier;
 import com.epam.ta.reportportal.dao.IntegrationRepository;
 import com.epam.ta.reportportal.dao.IntegrationTypeRepository;
+import com.epam.ta.reportportal.dao.ItemAttributeRepository;
+import com.epam.ta.reportportal.dao.LaunchRepository;
+import com.epam.ta.reportportal.dao.TestItemRepository;
 import org.pf4j.Extension;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,13 +32,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static com.epam.reportportal.extension.healenium.utils.Constants.HEALENIUM;
+
 @Extension
 @Component
 public class HealeniumPluginExtension implements ReportPortalExtensionPoint, DisposableBean {
 
     public static final String BINARY_DATA_PROPERTIES_FILE_ID = "healenium-binary-data.properties";
-
-    private static final String PLUGIN_ID = "healenium";
 
     private final Supplier<Map<String, PluginCommand>> pluginCommandMapping = new MemoizingSupplier<>(this::getCommands);
 
@@ -51,17 +56,32 @@ public class HealeniumPluginExtension implements ReportPortalExtensionPoint, Dis
     @Autowired
     private IntegrationRepository integrationRepository;
 
+    @Autowired
+    private LaunchRepository launchRepository;
+
+    @Autowired
+    private TestItemRepository testItemRepository;
+
+    @Autowired
+    private ItemAttributeRepository itemAttributeRepository;
+
     private final Supplier<ApplicationListener<PluginEvent>> pluginLoadedListener;
+    private final Supplier<ApplicationListener<LaunchAutoAnalysisFinishEvent>> launchAutoAnalysisFinishEventListenerSupplier;
 
     public HealeniumPluginExtension(Map<String, Object> initParams) {
 
-        resourcesDir = IntegrationTypeProperties.RESOURCES_DIRECTORY.getValue(initParams).map(String::valueOf).orElse("");
-        pluginLoadedListener = new MemoizingSupplier<>(() -> new PluginEventListener(PLUGIN_ID,
+        resourcesDir = IntegrationTypeProperties.RESOURCES_DIRECTORY.getValue(initParams)
+                .map(String::valueOf)
+                .orElse("");
+        pluginLoadedListener = new MemoizingSupplier<>(() -> new PluginEventListener(HEALENIUM,
                 new PluginEventHandlerFactory(resourcesDir,
                         integrationTypeRepository,
                         integrationRepository
                 )
         ));
+
+        launchAutoAnalysisFinishEventListenerSupplier = new MemoizingSupplier<>(() ->
+                new HealeniumLaunchAutoAnalysisFinishEvent(launchRepository, testItemRepository, itemAttributeRepository));
     }
 
     @Override
@@ -78,20 +98,24 @@ public class HealeniumPluginExtension implements ReportPortalExtensionPoint, Dis
 
     @PostConstruct
     public void createIntegration() throws IOException {
-        ApplicationEventMulticaster applicationEventMulticaster = applicationContext.getBean(AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
+        ApplicationEventMulticaster applicationEventMulticaster = applicationContext.getBean(
+                AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
                 ApplicationEventMulticaster.class
         );
         applicationEventMulticaster.addApplicationListener(pluginLoadedListener.get());
-        delegatingClassLoader.addLoader("healenium", getClass().getClassLoader());
+        applicationEventMulticaster.addApplicationListener(launchAutoAnalysisFinishEventListenerSupplier.get());
+        delegatingClassLoader.addLoader(HEALENIUM, getClass().getClassLoader());
     }
 
     @Override
     public void destroy() {
-        ApplicationEventMulticaster applicationEventMulticaster = applicationContext.getBean(AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
+        ApplicationEventMulticaster applicationEventMulticaster = applicationContext.getBean(
+                AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
                 ApplicationEventMulticaster.class
         );
         applicationEventMulticaster.removeApplicationListener(pluginLoadedListener.get());
-        delegatingClassLoader.removeLoader("healenium");
+        applicationEventMulticaster.removeApplicationListener(launchAutoAnalysisFinishEventListenerSupplier.get());
+        delegatingClassLoader.removeLoader(HEALENIUM);
     }
 
     private Map<String, PluginCommand> getCommands() {
