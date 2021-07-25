@@ -54,13 +54,13 @@ dependencies {
         implementation 'com.epam.reportportal:plugin-api'
         annotationProcessor 'com.epam.reportportal:plugin-api'
     } else {
-        implementation 'com.github.reportportal:plugin-api:574b261'
-        annotationProcessor 'com.github.reportportal:plugin-api:574b261'
+        implementation 'com.github.reportportal:plugin-api:48e08b04'
+        annotationProcessor 'com.github.reportportal:plugin-api:48e08b04'
     }
 
     implementation 'com.sun.mail:javax.mail:1.6.2'
 
-    implementation 'com.github.reportportal:commons-dao:17e4550'
+    implementation 'com.github.reportportal:commons-dao:7ff31473'
 
     implementation 'org.springframework.boot:spring-boot-starter-quartz'
     implementation group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
