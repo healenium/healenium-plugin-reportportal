@@ -1,4 +1,7 @@
-import {HealeniumPattern} from 'components/healeniumTab/healeniumPattern'
+import {HealeniumPattern} from 'components/healeniumTab/healeniumPattern';
+import {useCommandExecutor} from 'hooks/useCommandExecutor';
+import {ENABLE_HEALENIUM_PLUGIN} from 'constants/pluginCommands';
+import {GET_HEALENIUM_PLUGIN_STATUS} from 'constants/pluginCommands';
 import Parser from 'html-react-parser'
 
 const patternNameNegativeTitle = 'Failed to find an element using locator';
@@ -48,29 +51,34 @@ const description = {
   lineHeight: '14px'
 };
 
-const SETTINGS_PAGE = 'settings';
-
-const SETTINGS_PAGE_EVENTS = {
-  TURN_ON_PA_SWITCHER: {
-    category: SETTINGS_PAGE,
-    action: 'Switch On Pattern Analysis',
-    label: 'Switch On Pattern Analysis',
-  },
-  TURN_OFF_PA_SWITCHER: {
-    category: SETTINGS_PAGE,
-    action: 'Switch Off Pattern Analysis',
-    label: 'Switch Off Pattern Analysis',
-  }
-}
-
 export const HealeniumTab = (props) => {
 
   const {lib: {React},
         components: {InputBigSwitcher}} = props;
   const [paState, setPaState] = React.useState(true);
+  const executeCommand = useCommandExecutor(props);
+
+  executeCommand(GET_HEALENIUM_PLUGIN_STATUS, {})
+    .then((state) => {
+      setPaState(state);
+      setLoading(false);
+    })
+    .catch((err) => {
+      dispatch(showErrorNotification({message: err.message}));
+      setLoading(false);
+    })
 
   const handleOnChangeSwitcher = (state) => {
-    setPaState(state);
+    executeCommand(ENABLE_HEALENIUM_PLUGIN, {state: state})
+      .then(() => {
+        setPaState(state);
+        setLoading(false);
+      })
+      .catch((err) => {
+        dispatch(showErrorNotification({message: err.message}));
+        setLoading(false);
+      })
+
   };
 
 

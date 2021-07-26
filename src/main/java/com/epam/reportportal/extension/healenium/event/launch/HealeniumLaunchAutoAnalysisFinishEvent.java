@@ -1,6 +1,8 @@
 package com.epam.reportportal.extension.healenium.event.launch;
 
 import com.epam.reportportal.extension.event.LaunchAutoAnalysisFinishEvent;
+import com.epam.reportportal.extension.healenium.dao.HealeniumDao;
+import com.epam.reportportal.extension.healenium.utils.Constants;
 import com.epam.ta.reportportal.dao.ItemAttributeRepository;
 import com.epam.ta.reportportal.dao.LaunchRepository;
 import com.epam.ta.reportportal.dao.TestItemRepository;
@@ -16,9 +18,9 @@ import org.springframework.context.ApplicationListener;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.epam.reportportal.extension.healenium.utils.Constants.HEALENIUM;
 import static com.epam.ta.reportportal.ws.model.ErrorType.LAUNCH_NOT_FOUND;
 
 public class HealeniumLaunchAutoAnalysisFinishEvent implements ApplicationListener<LaunchAutoAnalysisFinishEvent> {
@@ -31,17 +33,23 @@ public class HealeniumLaunchAutoAnalysisFinishEvent implements ApplicationListen
     private final LaunchRepository launchRepository;
     private final TestItemRepository testItemRepository;
     private final ItemAttributeRepository itemAttributeRepository;
+    private final HealeniumDao healeniumDao;
 
     public HealeniumLaunchAutoAnalysisFinishEvent(LaunchRepository launchRepository,
                                                   TestItemRepository testItemRepository,
-                                                  ItemAttributeRepository itemAttributeRepository) {
+                                                  ItemAttributeRepository itemAttributeRepository,
+                                                  HealeniumDao healeniumDao) {
         this.launchRepository = launchRepository;
         this.testItemRepository = testItemRepository;
         this.itemAttributeRepository = itemAttributeRepository;
+        this.healeniumDao = healeniumDao;
     }
 
     @Override
     public void onApplicationEvent(LaunchAutoAnalysisFinishEvent event) {
+        if (!isHealeniumEnabled()) {
+            return;
+        }
         Launch launch = launchRepository.findById(event.getSource())
                 .orElseThrow(() -> new ReportPortalException(LAUNCH_NOT_FOUND, event.getSource()));
 
@@ -59,20 +67,20 @@ public class HealeniumLaunchAutoAnalysisFinishEvent implements ApplicationListen
     }
 
     private void addLaunchAttribute(Launch launch) {
-        ItemAttribute healeniumAttr = new ItemAttribute(null, HEALENIUM, false);
+        ItemAttribute healeniumAttr = new ItemAttribute(null, Constants.HEALENIUM, false);
         healeniumAttr.setLaunch(launch);
         launch.getAttributes().add(healeniumAttr);
         itemAttributeRepository.save(healeniumAttr);
     }
 
-    private List<TestItem> addItemAttribute(List<Long> allItemIds, String pattern, String attrValue) {
+    private Set<TestItem> addItemAttribute(List<Long> allItemIds, String pattern, String attrValue) {
         List<Long> childItemIds = testItemRepository.selectIdsByStringLogMessage(allItemIds, LogLevel.WARN_INT, pattern);
-        List<TestItem> testItems = childItemIds.stream()
+        Set<TestItem> testItems = childItemIds.stream()
                 .map(testItemRepository::findById)
                 .filter(Optional::isPresent)
                 .map(child -> testItemRepository.findById(child.get().getParentId()))
                 .flatMap(Optional::stream)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
 
         testItems.forEach(item -> {
             ItemAttribute itemAttribute = new ItemAttribute("healing", attrValue, false);
@@ -81,5 +89,9 @@ public class HealeniumLaunchAutoAnalysisFinishEvent implements ApplicationListen
             itemAttributeRepository.save(itemAttribute);
         });
         return testItems;
+    }
+
+    private Boolean isHealeniumEnabled() {
+        return healeniumDao.isActive();
     }
 }
