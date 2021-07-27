@@ -29,7 +29,9 @@ const config = {
       '.jsx'
     ],
     alias: {
-      components: path.resolve(__dirname, 'src/components')
+      components: path.resolve(__dirname, 'src/components'),
+      constants: path.resolve(__dirname, 'src/constants'),
+      hooks: path.resolve(__dirname, 'src/hooks'),
     },
   },
 };
