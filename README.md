@@ -7,14 +7,8 @@ Healenium plugin for ReportPortal is an easy way to sort your test results to an
 1. Clone current repository for plugin
 2. Checkout source code
 3. Move to root project folder and open console here
-4. Perform command ```gradlew clean build```
-   
-   Command should successfully build the project:
-![img.png](build.png)
-   
-5. As a result, new ```healenium-plugin-reportportal-1.0.jar``` file appeared in ```build/libs/``` directory
-![img.png](jarfile.png)
-   
+4. Download jar asset from releases https://github.com/healenium/healenium-plugin-reportportal/releases 
+
 6. Upload received file to Report Portal using following instruction: https://reportportal.io/docs/Plugins
    
    Also, you can find helpful instructions for uploading jar files into Report Portal here: https://github.com/reportportal/reportportal/issues/680
