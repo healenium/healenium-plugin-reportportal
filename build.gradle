@@ -45,7 +45,7 @@ repositories {
 
 dependencyManagement {
     imports {
-        mavenBom(releaseMode ? 'com.epam.reportportal:commons-bom:' + getProperty('bom.version') : 'com.github.reportportal:commons-bom:4b7ed8a')
+        mavenBom(releaseMode ? 'com.epam.reportportal:commons-bom:' + getProperty('bom.version') : 'com.github.reportportal:commons-bom:7ea4bf3')
     }
 }
 
@@ -60,7 +60,7 @@ dependencies {
 
     implementation 'com.sun.mail:javax.mail:1.6.2'
 
-    implementation 'com.github.reportportal:commons-dao:7ff31473'
+    implementation 'com.github.reportportal:commons-dao:72fb7f1'
 
     implementation 'org.springframework.boot:spring-boot-starter-quartz'
     implementation group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
