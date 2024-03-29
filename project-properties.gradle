@@ -3,6 +3,6 @@ targetCompatibility = JavaVersion.VERSION_11
 
 project.ext {
     releaseMode = project.hasProperty("releaseMode")
-    pluginsDir = "$buildDir/plugins"
+    pluginsDir = "$buildDir/jars"
 }
 

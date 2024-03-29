@@ -1,26 +1,24 @@
 package com.epam.reportportal.extension.healenium;
 
+import com.epam.reportportal.extension.CommonPluginCommand;
 import com.epam.reportportal.extension.PluginCommand;
 import com.epam.reportportal.extension.ReportPortalExtensionPoint;
 import com.epam.reportportal.extension.classloader.DelegatingClassLoader;
 import com.epam.reportportal.extension.common.IntegrationTypeProperties;
-import com.epam.reportportal.extension.event.LaunchAutoAnalysisFinishEvent;
-import com.epam.reportportal.extension.event.PluginEvent;
+import com.epam.reportportal.extension.event.*;
 import com.epam.reportportal.extension.healenium.command.EnableHealeniumPluginCommand;
 import com.epam.reportportal.extension.healenium.command.GetFileCommand;
 import com.epam.reportportal.extension.healenium.command.GetHealeniumPluginStatusCommand;
+import com.epam.reportportal.extension.healenium.dao.HealeniumDao;
+import com.epam.reportportal.extension.healenium.dao.impl.HealeniumDaoImpl;
 import com.epam.reportportal.extension.healenium.event.launch.HealeniumLaunchAutoAnalysisFinishEvent;
 import com.epam.reportportal.extension.healenium.event.plugin.PluginEventHandlerFactory;
 import com.epam.reportportal.extension.healenium.event.plugin.PluginEventListener;
-import com.epam.reportportal.extension.healenium.dao.HealeniumDao;
-import com.epam.reportportal.extension.healenium.dao.impl.HealeniumDaoImpl;
 import com.epam.reportportal.extension.healenium.utils.MemoizingSupplier;
-import com.epam.ta.reportportal.dao.IntegrationRepository;
-import com.epam.ta.reportportal.dao.IntegrationTypeRepository;
-import com.epam.ta.reportportal.dao.ItemAttributeRepository;
-import com.epam.ta.reportportal.dao.LaunchRepository;
-import com.epam.ta.reportportal.dao.TestItemRepository;
+import com.epam.ta.reportportal.dao.*;
 import org.pf4j.Extension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -49,6 +47,8 @@ import static com.epam.reportportal.extension.healenium.utils.Constants.HEALENIU
 @Extension
 @Component
 public class HealeniumPluginExtension implements ReportPortalExtensionPoint, DisposableBean {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(HealeniumPluginExtension.class);
 
     public static final String BINARY_DATA_PROPERTIES_FILE_ID = "healenium-binary-data.properties";
 
@@ -84,12 +84,11 @@ public class HealeniumPluginExtension implements ReportPortalExtensionPoint, Dis
     private ItemAttributeRepository itemAttributeRepository;
 
     private final Supplier<HealeniumDao> healeniumDaoSupplier;
-    private final Supplier<Map<String, PluginCommand>> pluginCommandMapping = new MemoizingSupplier<>(this::getCommands);
+    private final Supplier<Map<String, PluginCommand<?>>> pluginCommandMapping = new MemoizingSupplier<>(this::getCommands);
     private final Supplier<ApplicationListener<PluginEvent>> pluginLoadedListener;
-    private final Supplier<ApplicationListener<LaunchAutoAnalysisFinishEvent>> launchAutoAnalysisFinishEventListenerSupplier;
+    private final Supplier<ApplicationListener<LaunchAnalysisFinishEvent>> launchAutoAnalysisFinishEventListenerSupplier;
 
     public HealeniumPluginExtension(Map<String, Object> initParams) {
-
         resourcesDir = IntegrationTypeProperties.RESOURCES_DIRECTORY.getValue(initParams)
                 .map(String::valueOf)
                 .orElse("");
@@ -113,7 +112,12 @@ public class HealeniumPluginExtension implements ReportPortalExtensionPoint, Dis
     }
 
     @Override
-    public PluginCommand getCommandToExecute(String commandName) {
+    public CommonPluginCommand getCommonCommand(String commandName) {
+        return null;
+    }
+
+    @Override
+    public PluginCommand getIntegrationCommand(String commandName) {
         return pluginCommandMapping.get().get(commandName);
     }
 
@@ -137,19 +141,8 @@ public class HealeniumPluginExtension implements ReportPortalExtensionPoint, Dis
         }
     }
 
-    @Override
-    public void destroy() {
-        ApplicationEventMulticaster applicationEventMulticaster = applicationContext.getBean(
-                AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
-                ApplicationEventMulticaster.class
-        );
-        applicationEventMulticaster.removeApplicationListener(pluginLoadedListener.get());
-        applicationEventMulticaster.removeApplicationListener(launchAutoAnalysisFinishEventListenerSupplier.get());
-        delegatingClassLoader.removeLoader(HEALENIUM);
-    }
-
-    private Map<String, PluginCommand> getCommands() {
-        HashMap<String, PluginCommand> pluginCommandMapping = new HashMap<>();
+    private Map<String, PluginCommand<?>> getCommands() {
+        HashMap<String, PluginCommand<?>> pluginCommandMapping = new HashMap<>();
         GetFileCommand getFileCommand = new GetFileCommand(resourcesDir);
         EnableHealeniumPluginCommand enableHealeniumPluginCommand = new EnableHealeniumPluginCommand(healeniumDaoSupplier.get());
         GetHealeniumPluginStatusCommand getHealeniumPluginStatusCommand = new GetHealeniumPluginStatusCommand(healeniumDaoSupplier.get());
@@ -158,5 +151,17 @@ public class HealeniumPluginExtension implements ReportPortalExtensionPoint, Dis
         pluginCommandMapping.put(enableHealeniumPluginCommand.getName(), enableHealeniumPluginCommand);
         pluginCommandMapping.put(getHealeniumPluginStatusCommand.getName(), getHealeniumPluginStatusCommand);
         return pluginCommandMapping;
+    }
+
+    @Override
+    public void destroy() {
+        removeListeners();
+    }
+
+    private void removeListeners() {
+        ApplicationEventMulticaster applicationEventMulticaster = applicationContext.getBean(AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME,
+                ApplicationEventMulticaster.class
+        );
+        applicationEventMulticaster.removeApplicationListener(pluginLoadedListener.get());
     }
 }
