@@ -1,4 +1,4 @@
-package com.epam.reportportal.extension.healenium.proxy;
+package proxy;
 
 import org.apache.commons.io.input.TailerListenerAdapter;
 import org.slf4j.Logger;

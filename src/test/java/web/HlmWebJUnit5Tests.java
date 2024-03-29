@@ -1,4 +1,4 @@
-package com.epam.reportportal.extension.healenium.web;
+package web;
 
 import com.epam.healenium.SelfHealingDriver;
 import com.epam.reportportal.junit5.ReportPortalExtension;

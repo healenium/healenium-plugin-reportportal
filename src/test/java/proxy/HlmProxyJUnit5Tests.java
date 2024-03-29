@@ -1,4 +1,4 @@
-package com.epam.reportportal.extension.healenium.proxy;
+package proxy;
 
 import com.epam.reportportal.junit5.ReportPortalExtension;
 import io.github.bonigarcia.wdm.WebDriverManager;
