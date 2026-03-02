@@ -22,7 +22,7 @@ import java.net.URL;
 public class HlmProxyJUnit5Tests {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(HlmProxyJUnit5Tests.class);
-	private static final String url = "https://elenastepuro.github.io/test_env/index.html";
+	private static final String url = "https://healenium.github.io/healenium-test-env/index.html";
 
 	private static WebDriver driver;
 
