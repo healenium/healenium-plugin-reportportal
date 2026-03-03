@@ -19,7 +19,7 @@ public class HlmWebJUnit5Tests {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HlmWebJUnit5Tests.class);
 
-    private static final String url = "https://elenastepuro.github.io/test_env/index.html";
+    private static final String url = "https://healenium.github.io/healenium-test-env/index.html";
 
     static WebDriver driver;
 
